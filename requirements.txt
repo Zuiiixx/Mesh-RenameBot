@@ -9,3 +9,5 @@ pymongo
 dnspython
 Jinja2
 aiofiles
+fastapi
+uvicorn
