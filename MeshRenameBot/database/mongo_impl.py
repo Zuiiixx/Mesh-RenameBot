@@ -22,16 +22,13 @@ class UserDB(MongoDB):
         
 
         
-        res = users.find({"user_id":user_id})
+        user = users.find_one({"user_id": user_id})
 
-        if res.count() > 0:
-            user = res[0]
-            jdata = user["json_data"]
-            jdata = json.loads(jdata)
-            #self.shared_users[user_id] = jdata
-            return jdata.get(var)
-        else:
-            return None
+if user:
+    jdata = json.loads(user["json_data"])
+    return jdata.get(var)
+else:
+    return None
             
 
     def set_var(self, var: str, value: Union[int, str], user_id: int) -> None:
@@ -41,27 +38,15 @@ class UserDB(MongoDB):
         # implement cache later.
         
 
-        res = users.find({"user_id":user_id})
+        user = users.find_one({"user_id": user_id})
 
-        if res.count() > 0:
-            user = res[0]
-            jdata = user["json_data"]
-            jdata = json.loads(jdata)
-            jdata[var] = value
-            #self.shared_users[user_id] = jdata
-        else:
-            ...
-            #self.shared_users[user_id] = {var:value}
-
-        
-        if res.count() > 0:
-            user = res[0]
-            users.update({"_id":user["_id"]}, {"$set":{"json_data":json.dumps(jdata)}})
-
-        else:
-            jdata = {var:value}
-            users.insert_one({"user_id":user_id, "json_data":json.dumps(jdata), "file_choice":0, "thumbnail":None})
-        
+if user:
+    jdata = json.loads(user["json_data"])
+    jdata[var] = value
+    users.update_one({"_id": user["_id"]}, {"$set": {"json_data": json.dumps(jdata)}})
+else:
+    jdata = {var: value}
+    users.insert_one({"user_id": user_id, "json_data": json.dumps(jdata), "file_choice": 0, "thumbnail": None})
     
 
     def get_thumbnail(self, user_id: int) -> Union[str, bool]:
@@ -69,30 +54,28 @@ class UserDB(MongoDB):
         db = self._db
         users = db.mesh_rename
 
-        res = users.find({"user_id":user_id})
+        row = users.find_one({"user_id": user_id})
+
+if row:
+    if row["thumbnail"] is None:
+        return False
+    else:
+        path = os.path.join(os.getcwd(), 'userdata')
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        path = os.path.join(path, user_id)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        path = os.path.join(path, "thumbnail.jpg")
+        with open(path, "wb") as rfile:
+            rfile.write(row["thumbnail"])
+
+        return path
+else:
+    return False
         
-        
-        if res.count() > 0:
-            row = res[0]
-            
-            if row["thumbnail"] is None:
-                return False
-            else:
-                path = os.path.join(os.getcwd(), 'userdata')
-                if not os.path.exists(path):
-                    os.mkdir(path)
-                
-                path = os.path.join(path, user_id)
-                if not os.path.exists(path):
-                    os.mkdir(path)
-                
-                path = os.path.join(path, "thumbnail.jpg")
-                with open(path, "wb") as rfile:
-                    rfile.write(row["thumbnail"])
-                
-                return path
-        else:
-            return False
 
 
     def set_thumbnail(self, thumbnail: bytes, user_id: int) -> bool:
@@ -100,18 +83,25 @@ class UserDB(MongoDB):
         db = self._db
         users = db.mesh_rename
 
-        res = users.find({"user_id":user_id})
         
-        if isinstance(thumbnail, str):
-            with open(thumbnail, "rb") as f:
-                thumbnail = f.read()
 
-        if res.count() > 0:
-            users.update({"user_id":user_id}, {"$set":{"thumbnail": thumbnail}})
-        else:
-            users.insert_one({"user_id":user_id, "thumbnail": thumbnail, "json_data":json.dumps({}), "file_choice":0})
+    if isinstance(thumbnail, str):
+        with open(thumbnail, "rb") as f:
+            thumbnail = f.read()
 
-        return True
+    user = users.find_one({"user_id": user_id})
+
+    if user:
+        users.update_one({"user_id": user_id}, {"$set": {"thumbnail": thumbnail}})
+    else:
+        users.insert_one({
+            "user_id": user_id,
+            "thumbnail": thumbnail,
+            "json_data": json.dumps({}),
+            "file_choice": 0
+        })
+
+    return True
 
 
     MODE_SAME_AS_SENT = 0
@@ -123,31 +113,31 @@ class UserDB(MongoDB):
         db = self._db
         users = db.mesh_rename
 
-        res = users.find({"user_id":user_id})
+        user = users.find_one({"user_id": user_id})
 
-        if res.count() > 0:
-            users.update({"user_id":user_id}, {"$set":{"file_choice": mode}})
-        else:
-            users.insert_one({"user_id":user_id, "file_choice": mode, "thumbnail": None, "json_data":json.dumps({})})
+if user:
+    users.update_one({"user_id": user_id}, {"$set": {"file_choice": mode}})
+else:
+    users.insert_one({
+        "user_id": user_id,
+        "file_choice": mode,
+        "thumbnail": None,
+        "json_data": json.dumps({})
+    })
 
-        return True
+return True
     
     def get_mode(self, user_id: int) -> int:
         user_id = str(user_id)
         db = self._db
         users = db.mesh_rename
 
-        res = users.find({"user_id":user_id})
-        
-        
-        if res.count() > 0:
-            row = res[0]
-            
-            
-            if row["file_choice"] is None:
-                return self.MODE_SAME_AS_SENT
-            else:
-                return row["file_choice"]
-            
-        else:
-            return False
+        row = users.find_one({"user_id": user_id})
+
+if row:
+    if row.get("file_choice") is None:
+        return self.MODE_SAME_AS_SENT
+    else:
+        return row["file_choice"]
+else:
+    return False
