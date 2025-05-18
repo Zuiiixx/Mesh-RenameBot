@@ -7,9 +7,12 @@ from typing import Union
 class UserDB(MongoDB):
     shared_users = {}
 
+    # Add all these constants
     MODE_SAME_AS_SENT = 0
     MODE_AS_DOCUMENT = 1
     MODE_AS_GMEDIA = 2
+    MODE_RENAME_WITHOUT_COMMAND = 3
+    MODE_RENAME_WITH_COMMAND = 4
 
     def __init__(self, dburl=None):
         if dburl is None:
