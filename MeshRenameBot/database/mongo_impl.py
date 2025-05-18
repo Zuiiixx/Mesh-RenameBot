@@ -127,7 +127,7 @@ else:
 
 return True
     
-    class UserDB(MongoDB):
+class UserDB(MongoDB):
     ...
 
     def get_mode(self, user_id: int) -> int:
