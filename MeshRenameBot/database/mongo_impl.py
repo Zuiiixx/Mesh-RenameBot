@@ -127,17 +127,16 @@ else:
 
 return True
     
+    class UserDB(MongoDB):
+    ...
+
     def get_mode(self, user_id: int) -> int:
         user_id = str(user_id)
         db = self._db
         users = db.mesh_rename
 
-        row = users.find_one({"user_id": user_id})
-
-if row:
-    if row.get("file_choice") is None:
-        return self.MODE_SAME_AS_SENT
-    else:
-        return row["file_choice"]
-else:
-    return False
+        user = users.find_one({"user_id": user_id})
+        if user:
+            return user.get("file_choice", self.MODE_SAME_AS_SENT)
+        else:
+            return self.MODE_SAME_AS_SENT
