@@ -9,11 +9,12 @@ class EnglishTranslations:
     WRONG_VALUE_ERROR = "❌ Invalid value entered for {{ variable_name }} variable."
 
     START_MSG = (
-        "👋 Hello there! I am **Mesh Rename Bot**.\n\n"
-        "🌟 Open Source: [GitHub](https://github.com/yash-dk/Mesh-RenameBot/tree/master)\n"
-        "🚀 You can deploy your own instance!"
+    "👋 Hello there! I am **ANYA Rename Bot**.\n\n"
+    "✨ This bot offers seamless and efficient file renaming services tailored for you.\n\n"
+    "🌐 Join our community: [@ZyricBots](https://t.me/ZyricBots)\n"
+    "👤 Admin: [@mikeyy004](https://t.me/mikeyy004)\n\n"
+    "🚀 Deploy your own instance and customize it as you like!"
     )
-
     CANCEL_MESSAGE = "⚠️ The rename has been **canceled**. Will be updated soon."
 
     RENAME_NO_FILTER_MATCH = (
