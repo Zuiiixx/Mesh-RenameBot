@@ -79,6 +79,13 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(
         MessageHandler(help_str, filters.regex(Commands.HELP, re.IGNORECASE))
     )
+    client.add_handler(  # NEW
+        MessageHandler(start_sequence, filters.command("startsequence"))
+    )
+    client.add_handler(  # NEW
+        MessageHandler(end_sequence, filters.command("endsequence"))
+    )
+    
     client.add_handler(
         MessageHandler(set_caption, filters.regex(Commands.SET_CAPTION, re.IGNORECASE))
     )
