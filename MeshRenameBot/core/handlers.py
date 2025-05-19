@@ -25,7 +25,8 @@ from ..database.user_db import UserDB
 from .caption_manage import set_caption, del_caption
 from ..mesh_bot import MeshRenameBot
 from .change_locale import change_locale, set_locale
-
+# ADD THIS LINE HERE
+user_file_sequences = {}
 renamelog = logging.getLogger(__name__)
 
 
@@ -123,7 +124,7 @@ async def start_handler(_: MeshRenameBot, msg: Message) -> None:
     await msg.reply(Translator(user_locale).get("START_MSG"), quote=True)
 async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
-    UserDB().set_temp(user_id, "sequence_mode", [])
+    user_file_sequences[user_id] = {"files": []}
     user_locale = UserDB().get_var("locale", user_id)
     await msg.reply_text(Translator(user_locale).get("SEQUENCE_STARTED"), quote=True)
 
@@ -144,12 +145,13 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     if rep_msg is None:
         await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
     # Check if user is in bulk rename mode
-    from ..core.bulk_temp import bulk_file_store
+    global user_file_sequences
 
-    if msg.from_user.id in bulk_file_store:
-        bulk_file_store[msg.from_user.id].append(msg)
-        await msg.reply_text("File added to bulk rename list.")
-        return
+    if msg.from_user.id in user_file_sequences:
+    user_file_sequences[msg.from_user.id]["files"].append(rep_msg)
+    await msg.reply_text("File added to bulk rename list.")
+    return
+ 
     file_id = await client.get_file_id(rep_msg)
     if file_id is not None:
         await msg.reply_text(
