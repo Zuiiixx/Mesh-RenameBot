@@ -151,12 +151,12 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
         await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
 
     if msg.from_user.id in user_file_sequences:
-    if rep_msg and rep_msg.media:
-        user_file_sequences[msg.from_user.id]["files"].append(rep_msg)
+        if rep_msg and rep_msg.media:
+user_file_sequences[msg.from_user.id]["files"].append(rep_msg)
         await msg.reply_text("File added to sequence.")
     else:
         await msg.reply_text("Please send a valid media file (document/video/audio/photo).")
-    return
+        return
 
     file_id = await client.get_file_id(rep_msg)
     if file_id is not None:
