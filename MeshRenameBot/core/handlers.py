@@ -25,7 +25,7 @@ from ..database.user_db import UserDB
 from .caption_manage import set_caption, del_caption
 from ..mesh_bot import MeshRenameBot
 from .change_locale import change_locale, set_locale
-from ..core.bulk_temp import start_sequence, end_sequence
+from ..core.bulk_rename import start_sequence, end_sequence
 renamelog = logging.getLogger(__name__)
 
 
@@ -305,7 +305,6 @@ async def close_message(_: MeshRenameBot, msg: CallbackQuery) -> None:
     await msg.message.delete()
 # Paste this function
 async def end_sequence_handler(client: MeshRenameBot, msg: Message):
-    from ..core.bulk_temp import bulk_file_store
     from ..maneuvers.ExecutorManager import ExecutorManager
     from ..maneuvers.Rename import RenameManeuver
     from ..database.user_db import UserDB
@@ -316,15 +315,15 @@ async def end_sequence_handler(client: MeshRenameBot, msg: Message):
     user_locale = UserDB().get_var("locale", user_id)
     translator = Translator(user_locale)
 
-    if user_id not in bulk_file_store or not bulk_file_store[user_id]:
-        await msg.reply_text("No files found in your bulk rename list.")
+    if user_id not in user_file_sequences or not user_file_sequences[user_id]["files"]:
+        await msg.reply_text("No files found in sequence.")
         return
 
     await msg.reply_text("Bulk renaming started...")
 
-    for media_msg in bulk_file_store[user_id]:
+    for media_msg in user_file_sequences[user_id]["files"]:
         await ExecutorManager().create_maneuver(RenameManeuver(client, media_msg, msg))
         await asyncio.sleep(2)
 
-    del bulk_file_store[user_id]
-    await msg.reply_text("All files have been added to the rename queue.")
+    del user_file_sequences[user_id]
+    await msg.reply_text("Sequence complete. All files added to rename queue.")
