@@ -131,12 +131,24 @@ async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
     user_file_sequences[user_id] = {"files": []}
     user_locale = UserDB().get_var("locale", user_id)
-    await msg.reply_text(Translator(user_locale).get("SEQUENCE_STARTED"), quote=True)
-
+    await 
 async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
-    command_mode = UserDB().get_var("command_mode", msg.from_user.id)
-    user_locale = UserDB().get_var("locale", msg.from_user.id)
+    user_id = msg.from_user.id
+    user_locale = UserDB().get_var("locale", user_id)
     translator = Translator(user_locale)
+
+    # Handle bulk sequence mode
+    if user_id in user_file_sequences:
+        # Accept any media directly (no reply needed)
+        if msg.media:
+            user_file_sequences[user_id]["files"].append(msg)
+            await msg.reply_text("File added to bulk rename list.")
+        else:
+            await msg.reply_text("Please send a valid media file.")
+        return
+
+    # Handle normal rename mode
+    command_mode = UserDB().get_var("command_mode", user_id)
 
     if command_mode == UserDB.MODE_RENAME_WITHOUT_COMMAND:
         if msg.media is None:
@@ -147,21 +159,18 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
             return
         rep_msg = msg.reply_to_message
 
-    if msg.from_user.id in user_file_sequences:
-    # Add the message itself if it's a media file
-        if msg.media:
-            user_file_sequences[msg.from_user.id]["files"].append(msg)
-            print("Added media directly:", msg.file_id)
-            await msg.reply_text("File added to bulk rename list.")
-        else:
-            await msg.reply_text("Please send a media file after starting the sequence.")
+    if rep_msg is None:
+        await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
         return
 
     file_id = await client.get_file_id(rep_msg)
+
     if file_id is not None:
         await msg.reply_text(
             translator.get(
-                "RENAME_ADDED_TO_QUEUE", dc_id=file_id.dc_id, media_id=file_id.media_id
+                "RENAME_ADDED_TO_QUEUE",
+                dc_id=file_id.dc_id,
+                media_id=file_id.media_id
             ),
             quote=True,
         )
@@ -174,6 +183,7 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
             user_id=msg.from_user.id,
         )
     )
+
     await asyncio.sleep(2)
     await ExecutorManager().create_maneuver(RenameManeuver(client, rep_msg, msg))
 
