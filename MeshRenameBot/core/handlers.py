@@ -25,7 +25,7 @@ from ..database.user_db import UserDB
 from .caption_manage import set_caption, del_caption
 from ..mesh_bot import MeshRenameBot
 from .change_locale import change_locale, set_locale
-from ..core.bulk_rename import start_sequence, end_sequence
+
 renamelog = logging.getLogger(__name__)
 
 
@@ -79,12 +79,9 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(
         MessageHandler(help_str, filters.regex(Commands.HELP, re.IGNORECASE))
     )
-    client.add_handler(  # NEW
-        MessageHandler(start_sequence, filters.command("startsequence"))
-    )
-    client.add_handler(  # NEW
-        MessageHandler(end_sequence, filters.command("endsequence"))
-    )
+    client.add_handler(MessageHandler(start_sequence_handler, filters.command("startsequence")))
+    
+    client.add_handler(MessageHandler(end_sequence_handler, filters.command("endsequence")))
     
     client.add_handler(
         MessageHandler(set_caption, filters.regex(Commands.SET_CAPTION, re.IGNORECASE))
