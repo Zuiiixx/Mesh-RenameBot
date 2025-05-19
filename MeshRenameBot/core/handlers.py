@@ -38,9 +38,8 @@ def add_handlers(client: MeshRenameBot) -> None:
 
     client.add_handler(MessageHandler(intercept_handler))
     client.add_handler(MessageHandler(interactive_input))
-    client.add_handler(
-        MessageHandler(start_handler, filters.regex(Commands.START, re.IGNORECASE))
-    )
+    client.add_handler(MessageHandler(start_handler, filters.command("start")))
+
     client.add_handler(
         MessageHandler(rename_handler, filters.regex(Commands.RENAME, re.IGNORECASE))
     )
