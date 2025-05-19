@@ -85,3 +85,5 @@ class Commands:
     HELP = COMMANDS.get("HELP", "/help")
     SET_CAPTION = COMMANDS.get("SET_CAPTION", "/setcaption")
     SET_LANG = COMMANDS.get("SET_LANG", "/setlanguage")
+    START_SEQUENCE = COMMANDS.get("START_SEQUENCE", "/startsequence")
+    END_SEQUENCE = COMMANDS.get("END_SEQUENCE", "/endsequence")
