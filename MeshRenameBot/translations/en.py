@@ -222,3 +222,4 @@ class EnglishTranslations:
 
     CURRENT_LOCALE = "🌐 **Your current language:** {{ user_locale }}"
 
+    SEQUENCE_STARTED = "✅ Sequence mode activated. Now send files to add to the list."
