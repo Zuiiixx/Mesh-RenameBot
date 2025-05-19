@@ -147,6 +147,7 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     # Check if user is in bulk rename mode
     global user_file_sequences
 
+    # Replace the old bulk_file_store check with this:
     if msg.from_user.id in user_file_sequences:
     user_file_sequences[msg.from_user.id]["files"].append(rep_msg)
     await msg.reply_text("File added to bulk rename list.")
