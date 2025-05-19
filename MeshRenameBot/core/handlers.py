@@ -133,7 +133,7 @@ async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
     await msg.reply_text(
         translator.get("SEQUENCE_STARTED"),
         quote=True
-    ) msg.reply(Translator(user_locale).get("START_MSG"), quote=True)
+    ) 
 async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
     user_file_sequences[user_id] = {"files": []}
