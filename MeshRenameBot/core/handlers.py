@@ -150,7 +150,6 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     if rep_msg is None:
         await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
 
-    # Check if user is in bulk rename mode
     if msg.from_user.id in user_file_sequences:
     if rep_msg and rep_msg.media:
         user_file_sequences[msg.from_user.id]["files"].append(rep_msg)
@@ -158,6 +157,7 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     else:
         await msg.reply_text("Please send a valid media file (document/video/audio/photo).")
     return
+
     file_id = await client.get_file_id(rep_msg)
     if file_id is not None:
         await msg.reply_text(
