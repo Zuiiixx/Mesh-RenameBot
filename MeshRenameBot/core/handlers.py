@@ -122,6 +122,10 @@ def add_handlers(client: MeshRenameBot) -> None:
     signal.signal(signal.SIGINT, term_handler)
     signal.signal(signal.SIGTERM, term_handler)
 
+async def start_handler(_: MeshRenameBot, msg: Message) -> None:
+    user_locale = UserDB().get_var("locale", msg.from_user.id)
+
+    await msg.reply(Translator(user_locale).get("START_MSG"), quote=True)
 
 async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
