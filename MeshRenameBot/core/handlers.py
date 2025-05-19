@@ -44,7 +44,12 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(
         MessageHandler(rename_handler, filters.regex(Commands.RENAME, re.IGNORECASE))
     )
-    
+    client.add_handler(
+        MessageHandler(
+            rename_handler,
+            filters.document | filters.video | filters.audio | filters.photo,
+        )
+    )
     client.add_handler(
         MessageHandler(
             filter_controller, filters.regex(Commands.FILTERS, re.IGNORECASE)
@@ -107,7 +112,12 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(
         CallbackQueryHandler(set_locale, filters.regex("set_locale", re.IGNORECASE))
     )
-    
+    client.add_handler(
+    MessageHandler(
+        rename_handler,
+        filters.document | filters.video | filters.audio | filters.photo,
+    )
+    )
 
     signal.signal(signal.SIGINT, term_handler)
     signal.signal(signal.SIGTERM, term_handler)
@@ -131,15 +141,18 @@ async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
 
 async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
+    user_locale = UserDB().get_var("locale", user_id)
+    translator = Translator(user_locale)
 
-    # Early return if user is in bulk sequence mode
+    # Handle bulk sequence mode
     if user_id in user_file_sequences:
+        # Accept any media directly (no reply needed)
         if msg.media:
             user_file_sequences[user_id]["files"].append(msg)
             await msg.reply_text("File added to bulk rename list.")
         else:
             await msg.reply_text("Please send a valid media file.")
-        return  # <-- this return is crucial to prevent further processing
+        return
 
     # Handle normal rename mode
     command_mode = UserDB().get_var("command_mode", user_id)
