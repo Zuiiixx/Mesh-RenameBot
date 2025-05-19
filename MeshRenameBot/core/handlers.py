@@ -126,7 +126,11 @@ async def start_handler(_: MeshRenameBot, msg: Message) -> None:
     user_locale = UserDB().get_var("locale", msg.from_user.id)
 
     await msg.reply(Translator(user_locale).get("START_MSG"), quote=True)
-
+async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
+    user_id = msg.from_user.id
+    UserDB().set_temp(user_id, "sequence_mode", [])
+    user_locale = UserDB().get_var("locale", user_id)
+    await msg.reply_text(Translator(user_locale).get("SEQUENCE_STARTED"), quote=True)
 
 async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     command_mode = UserDB().get_var("command_mode", msg.from_user.id)
