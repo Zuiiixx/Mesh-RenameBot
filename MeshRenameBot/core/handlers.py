@@ -25,7 +25,7 @@ from ..database.user_db import UserDB
 from .caption_manage import set_caption, del_caption
 from ..mesh_bot import MeshRenameBot
 from .change_locale import change_locale, set_locale
-
+from ..core.bulk_temp import start_sequence, end_sequence
 renamelog = logging.getLogger(__name__)
 
 
@@ -115,6 +115,8 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(
         CallbackQueryHandler(set_locale, filters.regex("set_locale", re.IGNORECASE))
     )
+    client.add_handler(MessageHandler(start_sequence, filters.command("startsequence")))
+    client.add_handler(MessageHandler(end_sequence, filters.command("endsequence")))
 
     signal.signal(signal.SIGINT, term_handler)
     signal.signal(signal.SIGTERM, term_handler)
@@ -142,7 +144,13 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
 
     if rep_msg is None:
         await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
+    # Check if user is in bulk rename mode
+    from ..core.bulk_temp import bulk_file_store
 
+    if msg.from_user.id in bulk_file_store:
+        bulk_file_store[msg.from_user.id].append(msg)
+        await msg.reply_text("File added to bulk rename list.")
+        return
     file_id = await client.get_file_id(rep_msg)
     if file_id is not None:
         await msg.reply_text(
@@ -291,3 +299,28 @@ async def close_message(_: MeshRenameBot, msg: CallbackQuery) -> None:
     if msg.message.reply_to_message is not None:
         await msg.message.reply_to_message.delete()
     await msg.message.delete()
+# Paste this function
+async def end_sequence_handler(client: MeshRenameBot, msg: Message):
+    from ..core.bulk_temp import bulk_file_store
+    from ..maneuvers.ExecutorManager import ExecutorManager
+    from ..maneuvers.Rename import RenameManeuver
+    from ..database.user_db import UserDB
+    from ..translations import Translator
+    import asyncio
+
+    user_id = msg.from_user.id
+    user_locale = UserDB().get_var("locale", user_id)
+    translator = Translator(user_locale)
+
+    if user_id not in bulk_file_store or not bulk_file_store[user_id]:
+        await msg.reply_text("No files found in your bulk rename list.")
+        return
+
+    await msg.reply_text("Bulk renaming started...")
+
+    for media_msg in bulk_file_store[user_id]:
+        await ExecutorManager().create_maneuver(RenameManeuver(client, media_msg, msg))
+        await asyncio.sleep(2)
+
+    del bulk_file_store[user_id]
+    await msg.reply_text("All files have been added to the rename queue.")
