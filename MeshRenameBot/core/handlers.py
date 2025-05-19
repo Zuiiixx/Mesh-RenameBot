@@ -112,12 +112,7 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(
         CallbackQueryHandler(set_locale, filters.regex("set_locale", re.IGNORECASE))
     )
-    client.add_handler(
-    MessageHandler(
-        rename_handler,
-        filters.document | filters.video | filters.audio | filters.photo,
-    )
-    )
+    
 
     signal.signal(signal.SIGINT, term_handler)
     signal.signal(signal.SIGTERM, term_handler)
