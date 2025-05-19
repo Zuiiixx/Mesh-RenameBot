@@ -112,7 +112,12 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(
         CallbackQueryHandler(set_locale, filters.regex("set_locale", re.IGNORECASE))
     )
-    client.add_handler(MessageHandler(collect_sequence_files, filters.document | filters.video | filters.audio | filters.photo))
+    client.add_handler(
+    MessageHandler(
+        rename_handler,
+        filters.document | filters.video | filters.audio | filters.photo,
+    )
+    )
 
     signal.signal(signal.SIGINT, term_handler)
     signal.signal(signal.SIGTERM, term_handler)
@@ -301,6 +306,8 @@ async def close_message(_: MeshRenameBot, msg: CallbackQuery) -> None:
     await msg.message.delete()
 # Paste this function
 async def end_sequence_handler(client: MeshRenameBot, msg: Message):
+    global user_file_sequences  # <-- Add this line
+    ...
     from ..maneuvers.ExecutorManager import ExecutorManager
     from ..maneuvers.Rename import RenameManeuver
     from ..database.user_db import UserDB
@@ -325,6 +332,8 @@ async def end_sequence_handler(client: MeshRenameBot, msg: Message):
     await msg.reply_text("Sequence complete. All files added to rename queue.")
 
 async def collect_sequence_files(_: MeshRenameBot, msg: Message):
+    global user_file_sequences  # <-- Add this line
+    ...
     user_id = msg.from_user.id
 
     # If user started a sequence, collect the file
