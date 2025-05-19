@@ -68,6 +68,8 @@ class Commands:
         "HELP": "/help",
         "SET_CAPTION": "/setcaption",
         "SET_LANG": "/setlanguage",
+        "START_SEQUENCE": "/startsequence",
+        "END_SEQUENCE": "/endsequence",
     }
 
     COMMANDS: dict = config_data.get("COMMANDS", command_defaults)
