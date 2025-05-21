@@ -1,13 +1,12 @@
+from .core.get_config import get_var
 from .core.handlers import add_handlers
 from .mesh_bot import MeshRenameBot
-from .maneuvers.ExecutorManager import ExecutorManager
-from .config import Config  # Use Config constants directly
-
+from . maneuvers.ExecutorManager import ExecutorManager
 import logging
+
 import threading
 from fastapi import FastAPI
 import uvicorn
-
 
 def start_health_server():
     app = FastAPI()
@@ -18,26 +17,20 @@ def start_health_server():
 
     uvicorn.run(app, host="0.0.0.0", port=8080)
 
-
 # Start health check server in background
 threading.Thread(target=start_health_server, daemon=True).start()
-
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s %(levelname)s %(threadName)s %(name)s %(message)s"
 )
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
+# TODO Add a alert for an extra space recorded
 
-# MAIN ENTRY POINT
 if __name__ == "__main__":
-    rbot = MeshRenameBot(
-        session_string=Config.SESSION_STRING,
-        api_id=Config.API_ID,
-        api_hash=Config.API_HASH,
-        workers=200
-    )
 
+    rbot = MeshRenameBot("MeshRenameBot", get_var("API_ID"), get_var("API_HASH"), 
+                         bot_token=get_var("BOT_TOKEN"), workers=200)
     excm = ExecutorManager()
     add_handlers(rbot)
     rbot.run()
