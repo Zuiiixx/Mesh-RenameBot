@@ -6,7 +6,8 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     CallbackQuery,
 )
-from ..database.user_db import get_user_db
+from ..database.user_db import UserDB
+
 
 async def get_locale_keyboard(user_locale) -> InlineKeyboardMarkup:
     keyboard_markup = InlineKeyboardMarkup([])
@@ -32,15 +33,12 @@ async def get_locale_keyboard(user_locale) -> InlineKeyboardMarkup:
 
 
 async def change_locale(client: MeshRenameBot, message: Message) -> None:
-    UserDB = await get_user_db()
-    udb = UserDB
-    user_id = message.from_user.id
-    user_locale = udb.get_var("locale", user_id)
-    if user_locale is None:
-        user_locale = "en"
-
+    user_locale = UserDB().get_var("locale", message.from_user.id)
     translator = Translator(user_locale)
+
     keyboard_markup = await get_locale_keyboard(user_locale)
+
+    user_locale = UserDB().get_var("locale", message.from_user.id)
 
     await message.reply_text(
         translator.get("CURRENT_LOCALE", user_locale=user_locale),
@@ -52,8 +50,7 @@ async def change_locale(client: MeshRenameBot, message: Message) -> None:
 async def set_locale(client: MeshRenameBot, message: CallbackQuery) -> None:
     user_id = message.from_user.id
     locale = message.data.split()[1]
-    UserDB = await get_user_db()
-    UserDB.set_var("locale", locale, user_id)
+    UserDB().set_var("locale", locale, user_id)
     keyboard_markup = await get_locale_keyboard(locale)
 
     await message.message.edit_text(
