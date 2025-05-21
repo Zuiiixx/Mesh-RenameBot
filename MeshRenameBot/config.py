@@ -1,3 +1,27 @@
+import json
+import os
+
+config_path = "config.json"
+
+# Load config file
+if os.path.exists(config_path):
+    with open(config_path, "r") as f:
+        config_data = json.load(f)
+else:
+    config_data = {}
+
+def get_config_value(key, default):
+    """Returns the value from config.json with the expected type."""
+    value = config_data.get(key, default[1])
+    expected_type = default[0]
+
+    if not isinstance(value, expected_type):
+        print(
+            f"Warning: Type mismatch for {key}. Expected {expected_type}, got {type(value)}. Using default."
+        )
+        return default[1]
+    return value
+
 class Config:
     DATABASE_URL = get_config_value("DATABASE_URL", [str, ""])
     API_HASH = get_config_value("API_HASH", [str, "abcdedf......"])
