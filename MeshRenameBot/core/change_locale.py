@@ -33,12 +33,14 @@ async def get_locale_keyboard(user_locale) -> InlineKeyboardMarkup:
 
 
 async def change_locale(client: MeshRenameBot, message: Message) -> None:
-    user_locale = UserDB().get_var("locale", message.from_user.id)
+    udb = UserDB()
+    user_id = message.from_user.id
+    user_locale = udb.get_var("locale", user_id)
+    if user_locale is None:
+        user_locale = "en"
+
     translator = Translator(user_locale)
-
     keyboard_markup = await get_locale_keyboard(user_locale)
-
-    user_locale = UserDB().get_var("locale", message.from_user.id)
 
     await message.reply_text(
         translator.get("CURRENT_LOCALE", user_locale=user_locale),
