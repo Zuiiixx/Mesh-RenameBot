@@ -16,11 +16,13 @@ async def generate_mode_message(user_id):
     udb = UserDB()
     modee = udb.get_mode(user_id)
     command_mode = udb.get_var("command_mode", user_id)
-    command_mode = (
-        command_mode if command_mode is not None else UserDB.MODE_RENAME_WITH_COMMAND
-    )
+    if command_mode is None:
+        command_mode = UserDB.MODE_RENAME_WITH_COMMAND
 
     user_locale = udb.get_var("locale", user_id)
+    if user_locale is None:
+        user_locale = "en"
+
     translator = Translator(user_locale)
 
     msg_str = translator.get(
