@@ -2,29 +2,30 @@ from pyrogram import Client, types
 from pyrogram.file_id import FileId
 
 import logging
-from MeshRenameBot.config import Config
+from MeshRenameBot.core.get_config import get_var
 
 renamelog = logging.getLogger(__name__)
 
+# Diff File
 
 class MeshRenameBot(Client):
-    def __init__(self):
-        super().__init__(
-            name="MeshRenameBot",
-            api_id=Config.API_ID,
-            api_hash=Config.API_HASH,
-            bot_token=Config.BOT_TOKEN
-        )
-
     async def get_file_id(self, message):
         available_media = (
-            "audio", "document", "photo", "sticker", "animation",
-            "video", "voice", "video_note", "new_chat_photo",
+            "audio",
+            "document",
+            "photo",
+            "sticker",
+            "animation",
+            "video",
+            "voice",
+            "video_note",
+            "new_chat_photo",
         )
 
         if isinstance(message, types.Message):
             for kind in available_media:
                 media = getattr(message, kind, None)
+
                 if media is not None:
                     break
             else:
@@ -32,16 +33,21 @@ class MeshRenameBot(Client):
         else:
             media = message
 
-        file_id_str = media if isinstance(media, str) else media.file_id
+        if isinstance(media, str):
+            file_id_str = media
+        else:
+            file_id_str = media.file_id
 
-        return FileId.decode(file_id_str)
+        file_id_obj = FileId.decode(file_id_str)
+
+        return file_id_obj
 
     async def send_track(self, text_mess):
-        track_channel = Config.TRACE_CHANNEL
-        if track_channel:
+        track_channel = get_var("TRACE_CHANNEL")
+        if track_channel != 0:
             try:
                 await self.send_message(track_channel, text_mess)
-            except Exception:
+            except:
                 renamelog.exception(
-                    "Make sure to enter the Track Channel ID correctly."
+                    "Make Sure to enter the Track Channel ID correctly."
                 )
