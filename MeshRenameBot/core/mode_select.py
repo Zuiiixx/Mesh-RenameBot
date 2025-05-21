@@ -1,74 +1,342 @@
-from pyrogram.types.bots_and_keyboards.inline_keyboard_button import (
+from os import rename
+from MeshRenameBot.core.get_config import get_var
+from pyrogram import Client, filters
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+from pyrogram.types import (
+    Message,
     InlineKeyboardButton,
-)
-from pyrogram.types.bots_and_keyboards.inline_keyboard_markup import (
     InlineKeyboardMarkup,
+    CallbackQuery,
 )
-from pyrogram.types import CallbackQuery
-from pyrogram.types.user_and_chats.user import User
+from pyrogram.errors import UserNotParticipant, ChatAdminRequired, UsernameNotOccupied
+import re
+import logging
+import signal
+import asyncio
+from ..maneuvers.ExecutorManager import ExecutorManager
+from ..maneuvers.Rename import RenameManeuver
+from ..utils.c_filter import filter_controller, filter_interact
+from ..utils.user_input import interactive_input
+from .thumb_manage import handle_set_thumb, handle_get_thumb, handle_clr_thumb
+from .mode_select import upload_mode, mode_callback
+from ..config import Commands
+from ..translations import Translator, TRANSLATION_MAP
 from ..database.user_db import UserDB
+from .caption_manage import set_caption, del_caption
 from ..mesh_bot import MeshRenameBot
-from pyrogram.types import Message
-from ..translations import Translator
+from .change_locale import change_locale, set_locale
+# ADD THIS LINE HERE
+user_file_sequences = {}
+renamelog = logging.getLogger(__name__)
 
 
-async def generate_mode_message(user_id):
-    udb = UserDB()
-    modee = udb.get_mode(user_id)
-    command_mode = udb.get_var("command_mode", user_id)
-    command_mode = (
-        command_mode if command_mode is not None else UserDB.MODE_RENAME_WITH_COMMAND
+def add_handlers(client: MeshRenameBot) -> None:
+    """This function is responsible to manually register all the bot handlers.
+
+    Args:
+        client (pyrogram.Client): Initialized pyrogram client.
+    """
+
+    client.add_handler(MessageHandler(intercept_handler))
+    client.add_handler(MessageHandler(interactive_input))
+    client.add_handler(MessageHandler(start_handler, filters.command("start")))
+
+    client.add_handler(
+        MessageHandler(rename_handler, filters.regex(Commands.RENAME, re.IGNORECASE))
+    )
+    client.add_handler(
+        MessageHandler(
+            rename_handler,
+            filters.document | filters.video | filters.audio | filters.photo,
+        )
+    )
+    client.add_handler(
+        MessageHandler(
+            filter_controller, filters.regex(Commands.FILTERS, re.IGNORECASE)
+        )
+    )
+    client.add_handler(
+        MessageHandler(
+            handle_set_thumb, filters.regex(Commands.SET_THUMB, re.IGNORECASE)
+        )
+    )
+    client.add_handler(
+        MessageHandler(
+            handle_get_thumb, filters.regex(Commands.GET_THUMB, re.IGNORECASE)
+        )
+    )
+    client.add_handler(
+        MessageHandler(
+            handle_clr_thumb, filters.regex(Commands.CLR_THUMB, re.IGNORECASE)
+        )
+    )
+    client.add_handler(
+        MessageHandler(handle_queue, filters.regex(Commands.QUEUE, re.IGNORECASE))
+    )
+    client.add_handler(
+        MessageHandler(upload_mode, filters.regex(Commands.MODE, re.IGNORECASE))
+    )
+    client.add_handler(
+        MessageHandler(help_str, filters.regex(Commands.HELP, re.IGNORECASE))
+    )
+    client.add_handler(MessageHandler(start_sequence_handler, filters.command("startsequence")))
+    
+    client.add_handler(MessageHandler(end_sequence_handler, filters.command("endsequence")))
+    
+    client.add_handler(
+        MessageHandler(set_caption, filters.regex(Commands.SET_CAPTION, re.IGNORECASE))
+    )
+    client.add_handler(
+        MessageHandler(change_locale, filters.regex(Commands.SET_LANG, re.IGNORECASE))
+    )
+    client.add_handler(
+        CallbackQueryHandler(cancel_this, filters.regex("cancel", re.IGNORECASE))
+    )
+    client.add_handler(
+        CallbackQueryHandler(filter_interact, filters.regex("fltr", re.IGNORECASE))
+    )
+    client.add_handler(
+        CallbackQueryHandler(mode_callback, filters.regex("mode", re.IGNORECASE))
+    )
+    client.add_handler(
+        CallbackQueryHandler(
+            mode_callback, filters.regex("command_mode", re.IGNORECASE)
+        )
+    )
+    client.add_handler(
+        CallbackQueryHandler(close_message, filters.regex("close", re.IGNORECASE))
+    )
+    client.add_handler(
+        CallbackQueryHandler(del_caption, filters.regex("delcaption", re.IGNORECASE))
+    )
+    client.add_handler(
+        CallbackQueryHandler(set_locale, filters.regex("set_locale", re.IGNORECASE))
+    )
+    client.add_handler(
+    MessageHandler(
+        rename_handler,
+        filters.document | filters.video | filters.audio | filters.photo,
+    )
     )
 
-    user_locale = udb.get_var("locale", user_id)
+    signal.signal(signal.SIGINT, term_handler)
+    signal.signal(signal.SIGTERM, term_handler)
+
+
+async def start_handler(_: MeshRenameBot, msg: Message) -> None:
+    user_locale = UserDB().get_var("locale", msg.from_user.id)
+
+    await msg.reply(Translator(user_locale).get("START_MSG"), quote=True)
+async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
+    user_id = msg.from_user.id
+    user_file_sequences[user_id] = {"files": []}
+    user_locale = UserDB().get_var("locale", user_id)
+    await msg.reply_text(Translator(user_locale).get("SEQUENCE_STARTED"), quote=True)
+
+async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
+    command_mode = UserDB().get_var("command_mode", msg.from_user.id)
+    user_locale = UserDB().get_var("locale", msg.from_user.id)
     translator = Translator(user_locale)
 
-    msg_str = translator.get(
-        "MODE_INITIAL_MSG", mode=modee, command_mode=command_mode, udb=UserDB
+    if command_mode == UserDB.MODE_RENAME_WITHOUT_COMMAND:
+        if msg.media is None:
+            return
+        rep_msg = msg
+    else:
+        if msg.media:
+            return
+        rep_msg = msg.reply_to_message
+
+    if rep_msg is None:
+        await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
+
+    # Check if user is in bulk rename mode
+    if msg.from_user.id in user_file_sequences:
+        user_file_sequences[msg.from_user.id]["files"].append(rep_msg)
+        await msg.reply_text("File added to bulk rename list.")
+        return
+ 
+    file_id = await client.get_file_id(rep_msg)
+    if file_id is not None:
+        await msg.reply_text(
+            translator.get(
+                "RENAME_ADDED_TO_QUEUE", dc_id=file_id.dc_id, media_id=file_id.media_id
+            ),
+            quote=True,
+        )
+
+    await client.send_track(
+        translator.get(
+            "TRACK_MESSAGE_ADDED_RENAME",
+            username=msg.from_user.username,
+            name=msg.from_user.first_name,
+            user_id=msg.from_user.id,
+        )
+    )
+    await asyncio.sleep(2)
+    await ExecutorManager().create_maneuver(RenameManeuver(client, rep_msg, msg))
+
+
+async def help_str(_: MeshRenameBot, msg: Message) -> None:
+    user_locale = UserDB().get_var("locale", msg.from_user.id)
+    await msg.reply_text(
+        Translator(user_locale).get(
+            "HELP_STR",
+            startcmd=Commands.START,
+            renamecmd=Commands.RENAME,
+            filterscmd=Commands.FILTERS,
+            setthumbcmd=Commands.SET_THUMB,
+            getthumbcmd=Commands.GET_THUMB,
+            clrthumbcmd=Commands.CLR_THUMB,
+            modecmd=Commands.MODE,
+            queuecmd=Commands.QUEUE,
+            setcaptioncmd=Commands.SET_CAPTION,
+            helpcmd=Commands.HELP,
+            setlanguagecmd=Commands.SET_LANG,
+        ),
+        quote=True,
     )
 
-    markup = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(translator.get("MODE_SET_0"), "mode set 0"),
-                InlineKeyboardButton(translator.get("MODE_SET_1"), "mode set 1"),
-                InlineKeyboardButton(translator.get("MODE_SET_2"), "mode set 2"),
-            ],
-            [
-                InlineKeyboardButton(translator.get("COMMAND_MODE_SET_3"), "command_mode set 3"),
-                InlineKeyboardButton(translator.get("COMMAND_MODE_SET_4"), "command_mode set 4"),
-            ],
-            [
-                InlineKeyboardButton(translator.get("CLOSE"), "close"),
-            ],
-        ]
-    )
 
-    return msg_str, markup
+def term_handler(signum: int, frame: int) -> None:
+    ExecutorManager().stop()
 
 
-async def upload_mode(_: MeshRenameBot, msg: Message) -> None:
+async def cancel_this(_: MeshRenameBot, msg: CallbackQuery) -> None:
+    data = str(msg.data).split(" ")
+    ExecutorManager().canceled_uids.append(int(data[1]))
+    user_locale = UserDB().get_var("locale", msg.from_user.id)
+    await msg.answer(Translator(user_locale).get("CANCEL_MESSAGE"), show_alert=True)
+
+
+async def handle_queue(_: MeshRenameBot, msg: Message) -> None:
+    EM = ExecutorManager()
     user_id = msg.from_user.id
-    msg_str, markup = await generate_mode_message(user_id)
-    await msg.reply_text(msg_str, quote=True, reply_markup=markup)
+    user_locale = UserDB().get_var("locale", user_id)
+    translator = Translator(user_locale)
+
+    j = 0
+    for i in EM.all_maneuvers_log:
+        if i.is_pending:
+            j += 1
+    q_len = j
+
+    j = 0
+    for i in EM.all_maneuvers_log:
+        if i.is_executing:
+            j += 1
+    currently_exec = j
+
+    from_id = msg.from_user.id
+    max_size = get_var("MAX_QUEUE_SIZE")
+
+    fmsg = translator.get(
+        "RENAME_QUEUE_STATUS",
+        total_tasks=q_len,
+        queue_capacity=max_size,
+        current_task=currently_exec,
+    )
+
+    j = 1
+    for i in EM.all_maneuvers_log:
+        if i.sender_id == from_id:
+            fmsg += translator.get(
+                "RENAME_QUEUE_USER_STATUS",
+                is_executing=i.is_executing,
+                is_pending=i.is_pending,
+                task_id=i._unique_id,
+                task_number=j,
+            )
+
+        if i.is_pending:
+            j += 1
+
+    await msg.reply_text(fmsg)
 
 
-async def mode_callback(_: MeshRenameBot, msg: CallbackQuery):
-    data = msg.data.split(" ")
-    mode_type = data[0]  # Either 'mode' or 'command_mode'
-    mode_value = int(data[-1])
+async def intercept_handler(client: Client, msg: Message) -> None:
+    if not msg.from_user:
+        return
 
-    udb = UserDB()
-    user_id = msg.message.reply_to_message.from_user.id
+    user_id = msg.from_user.id
+    user_locale = UserDB().get_var("locale", user_id)
+    translator = Translator(user_locale)
 
-    if mode_type == "mode":
-        udb.set_mode(mode_value, user_id)
-    elif mode_type == "command_mode":
-        udb.set_var("command_mode", mode_value, user_id)
+    if get_var("FORCEJOIN") != "":
+        try:
+            user_state = await client.get_chat_member(
+                get_var("FORCEJOIN_ID"), msg.from_user.id
+            )
+            if user_state.status == "kicked":
+                await msg.reply_text(translator.get("USER_KICKED"), quote=True)
+                return
+        except UserNotParticipant:
+            forcejoin = get_var("FORCEJOIN")
+            await msg.reply_text(
+                translator.get("USER_NOT_PARTICIPANT"),
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                translator.get("JOIN_CHANNEL"), url=f"{forcejoin}"
+                            )
+                        ]
+                    ]
+                ),
+            )
+            return
+        except ChatAdminRequired:
+            renamelog.error("The bot is not the admin in the chat make it admin first.")
+            return
+        except UsernameNotOccupied:
+            renamelog.error("Invalid FORCEJOIN ID can find that chat.")
+            return
+        except:
+            renamelog.exception(
+                "The ID should be of the channel/ group that you want the user to join."
+            )
+            return
 
-    msg_str, markup = await generate_mode_message(user_id)
+    await msg.continue_propagation()
 
-    try:
-        await msg.message.edit_text(msg_str, reply_markup=markup)
-    except:
-        pass
+
+async def close_message(_: MeshRenameBot, msg: CallbackQuery) -> None:
+    if msg.message.reply_to_message is not None:
+        await msg.message.reply_to_message.delete()
+    await msg.message.delete()
+# Paste this function
+async def end_sequence_handler(client: MeshRenameBot, msg: Message):
+    global user_file_sequences  # <-- Add this line
+    ...
+    from ..maneuvers.ExecutorManager import ExecutorManager
+    from ..maneuvers.Rename import RenameManeuver
+    from ..database.user_db import UserDB
+    from ..translations import Translator
+    import asyncio
+
+    user_id = msg.from_user.id
+    user_locale = UserDB().get_var("locale", user_id)
+    translator = Translator(user_locale)
+
+    if user_id not in user_file_sequences or not user_file_sequences[user_id]["files"]:
+        await msg.reply_text("No files found in sequence.")
+        return
+
+    await msg.reply_text("Bulk renaming started...")
+
+    for media_msg in user_file_sequences[user_id]["files"]:
+        await ExecutorManager().create_maneuver(RenameManeuver(client, media_msg, msg))
+        await asyncio.sleep(2)
+
+    del user_file_sequences[user_id]
+    await msg.reply_text("Sequence complete. All files added to rename queue.")
+
+async def collect_sequence_files(_: MeshRenameBot, msg: Message):
+    global user_file_sequences  # <-- Add this line
+    ...
+    user_id = msg.from_user.id
+
+    # If user started a sequence, collect the file
+    if user_id in user_file_sequences:
+        user_file_sequences[user_id]["files"].append(msg)
+        await msg.reply_text("File added to sequence.")
