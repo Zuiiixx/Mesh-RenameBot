@@ -1,5 +1,5 @@
 from pyrogram import Client, types
-from ..database.user_db import UserDB
+from ..database.user_db import get_user_db
 from .user_input import userin
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import json
@@ -19,7 +19,8 @@ class FilterUtils:
     ADDITION_FILTER_RIGHT = 22
 
     def __init__(self, user_id: int) -> None:
-        self._user_db = UserDB()
+        UserDB = await get_user_db()
+        self._user_db = UserDB
         self._user_id = user_id
 
     def add_filer(self, ftype: int, first_param: str, second_param: str = None) -> None:
@@ -161,7 +162,8 @@ async def filter_controller(
     _: Client, msg: Union[types.Message, types.CallbackQuery], is_edit: bool = False
 ) -> None:
     user_id = msg.from_user.id
-    user_locale = UserDB().get_var(user_id, "locale")
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var(user_id, "locale")
     translator = Translator(user_locale)
 
     fsu = FilterUtils(user_id)
@@ -187,7 +189,8 @@ async def filter_controller(
 
 async def filter_interact(client, msg: types.CallbackQuery) -> None:
     user_id = msg.from_user.id
-    user_locale = UserDB().get_var(user_id, "locale")
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var(user_id, "locale")
     translator = Translator(user_locale)
     fltr_add = translator.get("FILTERS_INTRO")
 
