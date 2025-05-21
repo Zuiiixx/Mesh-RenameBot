@@ -2,17 +2,20 @@ from typing import Union
 from pyrogram.types.user_and_chats import user
 from aiofiles import os as aos
 from pyrogram.types.user_and_chats.user import User
-from ..database.user_db import get_user_db
+from ..database.user_db import UserDB
 from PIL import Image
 import os
 import asyncio
 import logging
 import time
 import random
+from ..database.user_db import UserDB
 from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
 from pyrogram.types import Message
 from ..translations import Translator
+
+# TODO trans pending
 
 renamelog = logging.getLogger(__name__)
 
@@ -31,8 +34,7 @@ async def adjust_image(path: str) -> Union[str, None]:
 
 async def handle_set_thumb(client, msg: Message):
     user_id = msg.from_user.id
-    UserDB = await get_user_db()
-    user_locale = await UserDB.get_var("locale", user_id)
+    user_locale = UserDB().get_var("locale", user_id)
     translator = Translator(user_locale)
 
     original_message = msg.reply_to_message
@@ -46,7 +48,7 @@ async def handle_set_thumb(client, msg: Message):
         if path is not None:
             with open(path, "rb") as file_handle:
                 data = file_handle.read()
-                UserDB.set_thumbnail(data, msg.from_user.id)
+                UserDB().set_thumbnail(data, msg.from_user.id)
 
             os.remove(path)
             await msg.reply_text(translator.get("THUMB_SET_SUCCESS"), quote=True)
@@ -59,12 +61,11 @@ async def handle_set_thumb(client, msg: Message):
 
 async def handle_get_thumb(client, msg: Message):
     user_id = msg.from_user.id
-    UserDB = await get_user_db()
-    user_locale = await UserDB.get_var("locale", user_id)
+    user_locale = UserDB().get_var("locale", user_id)
     translator = Translator(user_locale)
 
     renamelog.info("Getting Thumbnail")
-    thumb_path = UserDB.get_thumbnail(msg.from_user.id)
+    thumb_path = UserDB().get_thumbnail(msg.from_user.id)
     if thumb_path is False:
         await msg.reply(translator.get("THUMB_NOT_FOUND"), quote=True)
     else:
@@ -73,6 +74,7 @@ async def handle_get_thumb(client, msg: Message):
 
 
 async def gen_ss(filepath, ts, opfilepath=None):
+    # todo check the error pipe and do processing
     source = filepath
     destination = os.path.dirname(source)
     ss_name = str(os.path.basename(source)) + "_" + str(round(time.time())) + ".jpg"
@@ -119,6 +121,7 @@ async def resize_img(path, width=None, height=None):
 
 
 async def get_thumbnail(file_path, user_id=None, force_docs=False):
+    print(file_path, "-", user_id, "-", force_docs)
     metadata = extractMetadata(createParser(file_path))
     try:
         duration = metadata.get("duration")
@@ -126,8 +129,7 @@ async def get_thumbnail(file_path, user_id=None, force_docs=False):
         duration = 3
 
     if user_id is not None:
-        UserDB = await get_user_db()
-        user_thumb = UserDB.get_thumbnail(user_id)
+        user_thumb = UserDB().get_thumbnail(user_id)
         if force_docs:
             if user_thumb is not False:
                 return user_thumb
@@ -140,6 +142,7 @@ async def get_thumbnail(file_path, user_id=None, force_docs=False):
                 path = await gen_ss(file_path, random.randint(2, duration.seconds))
                 path = await resize_img(path, 320)
                 return path
+
     else:
         if force_docs:
             return None
@@ -151,9 +154,8 @@ async def get_thumbnail(file_path, user_id=None, force_docs=False):
 
 async def handle_clr_thumb(client, msg):
     user_id = msg.from_user.id
-    UserDB = await get_user_db()
-    udb = UserDB
-    user_locale = await udb.get_var("locale", user_id)
+    udb = UserDB()
+    user_locale = udb.get_var("locale", user_id)
     translator = Translator(user_locale)
     udb.set_thumbnail(None, msg.from_user.id)
     await msg.reply_text(translator.get("THUMB_CLEARED"), quote=True)
