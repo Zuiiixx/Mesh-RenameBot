@@ -8,7 +8,7 @@ import asyncio
 import logging
 import time
 import random
-from ..database.user_db import UserDB
+from ..database.user_db import get_user_db
 from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
 from pyrogram.types import Message
@@ -31,6 +31,7 @@ async def adjust_image(path: str) -> Union[str, None]:
 
 async def handle_set_thumb(client, msg: Message):
     user_id = msg.from_user.id
+    UserDB = await get_user_db()
     user_locale = UserDB().get_var(user_id, "locale")
     translator = Translator(user_locale)
 
@@ -58,6 +59,7 @@ async def handle_set_thumb(client, msg: Message):
 
 async def handle_get_thumb(client, msg: Message):
     user_id = msg.from_user.id
+    UserDB = await get_user_db()
     user_locale = UserDB().get_var(user_id, "locale")
     translator = Translator(user_locale)
 
@@ -150,6 +152,7 @@ async def get_thumbnail(file_path, user_id=None, force_docs=False):
 
 async def handle_clr_thumb(client, msg):
     user_id = msg.from_user.id
+    UserDB = await get_user_db()
     udb = UserDB()
     user_locale = udb.get_var(user_id, "locale")
     translator = Translator(user_locale)
