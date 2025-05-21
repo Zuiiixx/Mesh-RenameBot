@@ -46,7 +46,7 @@ async def handle_set_thumb(client, msg: Message):
         if path is not None:
             with open(path, "rb") as file_handle:
                 data = file_handle.read()
-                UserDB().set_thumbnail(data, msg.from_user.id)
+                UserDB.set_thumbnail(data, msg.from_user.id)
 
             os.remove(path)
             await msg.reply_text(translator.get("THUMB_SET_SUCCESS"), quote=True)
