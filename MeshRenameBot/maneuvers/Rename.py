@@ -64,7 +64,7 @@ async def handle_get_thumb(client, msg: Message):
     translator = Translator(user_locale)
 
     renamelog.info("Getting Thumbnail")
-    thumb_path = UserDB().get_thumbnail(msg.from_user.id)
+    thumb_path = UserDB.get_thumbnail(msg.from_user.id)
     if thumb_path is False:
         await msg.reply(translator.get("THUMB_NOT_FOUND"), quote=True)
     else:
@@ -127,7 +127,8 @@ async def get_thumbnail(file_path, user_id=None, force_docs=False):
         duration = 3
 
     if user_id is not None:
-        user_thumb = UserDB().get_thumbnail(user_id)
+        UserDB = await get_user_db()
+        user_thumb = UserDB.get_thumbnail(user_id)
         if force_docs:
             if user_thumb is not False:
                 return user_thumb
