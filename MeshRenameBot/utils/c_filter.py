@@ -1,5 +1,5 @@
 from pyrogram import Client, types
-from ..database.user_db import get_user_db
+from ..database.user_db import UserDB
 from .user_input import userin
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import json
@@ -19,15 +19,14 @@ class FilterUtils:
     ADDITION_FILTER_RIGHT = 22
 
     def __init__(self, user_id: int) -> None:
-        UserDB = await get_user_db()
-        self._user_db = UserDB
+        self._user_db = UserDB()
         self._user_id = user_id
 
     def add_filer(self, ftype: int, first_param: str, second_param: str = None) -> None:
         user_id = self._user_id
         if ftype == self.REPLACE_FILTER:
             if first_param is not None and second_param is not None:
-                data = self._user_db.get_var(user_id, "filters")
+                data = self._user_db.get_var("filters", user_id)
 
                 if data is None:
                     jdata = {}
@@ -44,10 +43,10 @@ class FilterUtils:
                         second_param,
                     ]
 
-                self._user_db.set_var(user_id, "filters", json.dumps(jdata))
+                self._user_db.set_var("filters", json.dumps(jdata), user_id)
         elif ftype == self.REMOVE_FILTER:
             if first_param is not None:
-                data = self._user_db.get_var(user_id, "filters")
+                data = self._user_db.get_var("filters", user_id)
 
                 if data is None:
                     jdata = {}
@@ -56,10 +55,10 @@ class FilterUtils:
                     jdata = json.loads(data)
                     jdata[str(time.time()).replace(".", "")] = [ftype, first_param]
 
-                self._user_db.set_var(user_id, "filters", json.dumps(jdata))
+                self._user_db.set_var("filters", json.dumps(jdata), user_id)
         elif ftype == self.ADDITION_FILTER:
             if first_param is not None and second_param is not None:
-                data = self._user_db.get_var(user_id, "filters")
+                data = self._user_db.get_var("filters", user_id)
 
                 if data is None:
                     jdata = {}
@@ -76,22 +75,22 @@ class FilterUtils:
                         second_param,
                     ]
 
-                self._user_db.set_var(user_id, "filters", json.dumps(jdata))
+                self._user_db.set_var("filters", json.dumps(jdata), user_id)
 
     def remove_filter(self, filter_id: int) -> None:
         user_id = self._user_id
         if filter_id is not None and user_id is not None:
-            data = self._user_db.get_var(user_id, "filters")
+            data = self._user_db.get_var("filters", user_id)
 
             jdata = json.loads(data)
             jdata.pop(filter_id)
-            self._user_db.set_var(user_id, "filters", json.dumps(jdata))
+            self._user_db.set_var("filters", json.dumps(jdata), user_id)
 
     def get_filters(self) -> dict:
         user_id = self._user_id
 
         if user_id is not None:
-            data = self._user_db.get_var(user_id, "filters")
+            data = self._user_db.get_var("filters", user_id)
 
             if data is not None:
                 jdata = json.loads(data)
@@ -162,8 +161,7 @@ async def filter_controller(
     _: Client, msg: Union[types.Message, types.CallbackQuery], is_edit: bool = False
 ) -> None:
     user_id = msg.from_user.id
-    UserDB = await get_user_db()
-    user_locale = UserDB.get_var(user_id, "locale")
+    user_locale = UserDB().get_var("locale", user_id)
     translator = Translator(user_locale)
 
     fsu = FilterUtils(user_id)
@@ -188,9 +186,9 @@ async def filter_controller(
 
 
 async def filter_interact(client, msg: types.CallbackQuery) -> None:
+    # fltr type
     user_id = msg.from_user.id
-    UserDB = await get_user_db()
-    user_locale = UserDB.get_var(user_id, "locale")
+    user_locale = UserDB().get_var("locale", user_id)
     translator = Translator(user_locale)
     fltr_add = translator.get("FILTERS_INTRO")
 
@@ -219,10 +217,11 @@ async def filter_interact(client, msg: types.CallbackQuery) -> None:
 
     if data[1] == "add":
         await msg.answer()
+
         await msg.message.edit_text(fltr_add, reply_markup=markup1)
 
     elif data[1] == "remove":
-        fsu = FilterUtils(user_id)
+        fsu = FilterUtils(msg.from_user.id)
         if len(data) == 3:
             fsu.remove_filter(data[2])
 
@@ -244,21 +243,27 @@ async def filter_interact(client, msg: types.CallbackQuery) -> None:
                 ilinekeys.append(currline)
                 currline = []
 
-        if currline:
+        if not currline == []:
             ilinekeys.append(currline)
 
         ilinekeys.append(
             [InlineKeyboardButton(translator.get("BACK"), "fltr back home")]
         )
 
-        ilinekeys = InlineKeyboardMarkup(ilinekeys) if ilinekeys else None
+        if ilinekeys == []:
+            ilinekeys = None
+        else:
+            ilinekeys = InlineKeyboardMarkup(ilinekeys)
 
         await msg.message.edit_text(fstr, reply_markup=ilinekeys)
 
     elif data[1] == "addf":
-        fsu = FilterUtils(user_id)
+
+        fsu = FilterUtils(msg.from_user.id)
 
         if data[2] == "replace":
+            # Replace Filter Logic
+
             fltm = translator.get("REPALCE_FILTER_INIT_MSG")
             await msg.message.edit_text(fltm, reply_markup=None)
 
@@ -270,47 +275,53 @@ async def filter_interact(client, msg: types.CallbackQuery) -> None:
                     fltr_add + "\n\n" + translator.get("NO_INPUT_FROM_USER"),
                     reply_markup=markup1,
                 )
+
             elif valg == "ignore":
                 await msg.message.edit_text(
                     fltr_add + "\n\n" + translator.get("INPUT_IGNORE"),
                     reply_markup=markup1,
                 )
+
             else:
                 if "|" not in valg:
                     await msg.message.edit_text(
                         fltr_add + "\n\n" + translator.get("WRONG_INPUT_FORMAT"),
                         reply_markup=markup1,
                     )
+
                 else:
                     valg = valg.split("|", 2)
                     success_add = "\n" + translator.get(
                         "REPLACE_FILTER_SUCCESS", text_1=valg[0], text_2=valg[1]
                     )
+
                     fsu.add_filer(FilterUtils.REPLACE_FILTER, valg[0], valg[1])
+
                     await msg.message.edit_text(
                         fltr_add + success_add, reply_markup=markup1
                     )
 
         if data[2] == "addition":
             if len(data) == 4:
+
                 inob = userin(client)
                 await msg.message.edit_text(
                     translator.get("ADDITION_FILTER_INIT_MSG"), reply_markup=None
                 )
                 valg = await inob.get_value(client, msg, del_msg=True)
-                if valg is not None:
-                    valg = valg.strip("|")
-
+                valg = valg.strip("|")
                 if valg is None:
                     await msg.message.edit_text(
                         fltr_add + "\n\n" + translator.get("NO_INPUT_FROM_USER"),
                         reply_markup=markup1,
                     )
+
                 elif valg == "ignore":
                     await msg.message.edit_text(
                         fltr_add + "\n\n" + translator.get("INPUT_IGNORE"),
                         reply_markup=markup1,
                     )
+
                 else:
                     if data[3] == "left":
                         success_add = "\n" + translator.get(
@@ -328,6 +339,7 @@ async def filter_interact(client, msg: types.CallbackQuery) -> None:
                         success_add = "\n" + translator.get(
                             "ADDITION_FILTER_SUCCESS_RIGHT", text_1=valg
                         )
+
                         fsu.add_filer(
                             FilterUtils.ADDITION_FILTER,
                             valg,
@@ -336,6 +348,7 @@ async def filter_interact(client, msg: types.CallbackQuery) -> None:
                         await msg.message.edit_text(
                             fltr_add + success_add, reply_markup=markup1
                         )
+
             else:
                 addition_markup = InlineKeyboardMarkup(
                     [
@@ -371,11 +384,13 @@ async def filter_interact(client, msg: types.CallbackQuery) -> None:
                     fltr_add + "\n\n" + translator.get("NO_INPUT_FROM_USER"),
                     reply_markup=markup1,
                 )
+
             elif valg == "ignore":
                 await msg.message.edit_text(
                     fltr_add + "\n\n" + translator.get("INPUT_IGNORE"),
                     reply_markup=markup1,
                 )
+
             else:
                 success_add = "\n" + translator.get(
                     "REMOVE_FILTER_SUCCESS", text_1=valg
