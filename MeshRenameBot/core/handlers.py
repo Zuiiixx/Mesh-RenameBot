@@ -80,9 +80,9 @@ def add_handlers(client: MeshRenameBot) -> None:
         MessageHandler(help_str, filters.regex(Commands.HELP, re.IGNORECASE))
     )
     client.add_handler(MessageHandler(start_sequence_handler, filters.command("startsequence")))
-    
+
     client.add_handler(MessageHandler(end_sequence_handler, filters.command("endsequence")))
-    
+
     client.add_handler(
         MessageHandler(set_caption, filters.regex(Commands.SET_CAPTION, re.IGNORECASE))
     )
@@ -130,7 +130,7 @@ async def start_handler(_: MeshRenameBot, msg: Message) -> None:
 async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
     user_file_sequences[user_id] = { "files": [] }
-    
+
     user_locale = UserDB().get_var("locale", user_id)
     translator = Translator(user_locale)
 
@@ -358,3 +358,4 @@ async def collect_sequence_files(_: MeshRenameBot, msg: Message):
     if user_id in user_file_sequences:
         user_file_sequences[user_id]["files"].append(msg)
         await msg.reply_text("File added to sequence.")
+
