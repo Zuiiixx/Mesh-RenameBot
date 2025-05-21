@@ -2,7 +2,7 @@ from pyrogram import Client, types
 from pyrogram.file_id import FileId
 
 import logging
-from MeshRenameBot.config import Config  # You had get_var, changed to use Config directly
+from MeshRenameBot.config import Config
 
 renamelog = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class MeshRenameBot(Client):
 
     async def send_track(self, text_mess):
         track_channel = Config.TRACE_CHANNEL
-        if track_channel != 0:
+        if track_channel:
             try:
                 await self.send_message(track_channel, text_mess)
             except Exception:
