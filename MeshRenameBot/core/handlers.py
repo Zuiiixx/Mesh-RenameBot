@@ -21,7 +21,7 @@ from .thumb_manage import handle_set_thumb, handle_get_thumb, handle_clr_thumb
 from .mode_select import upload_mode, mode_callback
 from ..config import Commands
 from ..translations import Translator, TRANSLATION_MAP
-from ..database.user_db import UserDB
+from ..database.user_db import get_user_db
 from .caption_manage import set_caption, del_caption
 from ..mesh_bot import MeshRenameBot
 from .change_locale import change_locale, set_locale
@@ -123,15 +123,17 @@ def add_handlers(client: MeshRenameBot) -> None:
     signal.signal(signal.SIGTERM, term_handler)
 
 async def start_handler(_: MeshRenameBot, msg: Message) -> None:
-    user_locale = UserDB().get_var("locale", msg.from_user.id)
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var("locale", msg.from_user.id)
 
     await msg.reply(Translator(user_locale).get("START_MSG"), quote=True)
 
 async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
     user_file_sequences[user_id] = { "files": [] }
-
-    user_locale = UserDB().get_var("locale", user_id)
+    
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var("locale", user_id)
     translator = Translator(user_locale)
 
     await msg.reply_text(
@@ -141,7 +143,8 @@ async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
 
 async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     user_id = msg.from_user.id
-    user_locale = UserDB().get_var("locale", user_id)
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var("locale", user_id)
     translator = Translator(user_locale)
 
     # Handle bulk sequence mode
@@ -155,7 +158,7 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
         return
 
     # Handle normal rename mode
-    command_mode = UserDB().get_var("command_mode", user_id)
+    command_mode = UserDB.get_var("command_mode", user_id)
 
     if command_mode == UserDB.MODE_RENAME_WITHOUT_COMMAND:
         if msg.media is None:
@@ -196,7 +199,8 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
 
 
 async def help_str(_: MeshRenameBot, msg: Message) -> None:
-    user_locale = UserDB().get_var("locale", msg.from_user.id)
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var("locale", msg.from_user.id)
     await msg.reply_text(
         Translator(user_locale).get(
             "HELP_STR",
@@ -223,14 +227,16 @@ def term_handler(signum: int, frame: int) -> None:
 async def cancel_this(_: MeshRenameBot, msg: CallbackQuery) -> None:
     data = str(msg.data).split(" ")
     ExecutorManager().canceled_uids.append(int(data[1]))
-    user_locale = UserDB().get_var("locale", msg.from_user.id)
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var("locale", msg.from_user.id)
     await msg.answer(Translator(user_locale).get("CANCEL_MESSAGE"), show_alert=True)
 
 
 async def handle_queue(_: MeshRenameBot, msg: Message) -> None:
     EM = ExecutorManager()
     user_id = msg.from_user.id
-    user_locale = UserDB().get_var("locale", user_id)
+    UserDB = await get_user_db()
+    user_locale = UserDB.get_var("locale", user_id)
     translator = Translator(user_locale)
 
     j = 0
@@ -275,9 +281,9 @@ async def handle_queue(_: MeshRenameBot, msg: Message) -> None:
 async def intercept_handler(client: Client, msg: Message) -> None:
     if not msg.from_user:
         return
-
+    UserDB = await get_user_db()
     user_id = msg.from_user.id
-    user_locale = UserDB().get_var("locale", user_id)
+    user_locale = UserDB.get_var("locale", user_id)
     translator = Translator(user_locale)
 
     if get_var("FORCEJOIN") != "":
@@ -325,15 +331,10 @@ async def close_message(_: MeshRenameBot, msg: CallbackQuery) -> None:
 # Paste this function
 async def end_sequence_handler(client: MeshRenameBot, msg: Message):
     global user_file_sequences  # <-- Add this line
-    ...
-    from ..maneuvers.ExecutorManager import ExecutorManager
-    from ..maneuvers.Rename import RenameManeuver
-    from ..database.user_db import UserDB
-    from ..translations import Translator
-    import asyncio
-
+    
+    UserDB = await get_user_db()
     user_id = msg.from_user.id
-    user_locale = UserDB().get_var("locale", user_id)
+    user_locale = UserDB.get_var("locale", user_id)
     translator = Translator(user_locale)
 
     if user_id not in user_file_sequences or not user_file_sequences[user_id]["files"]:
