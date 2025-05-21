@@ -1,6 +1,6 @@
 import asyncio
 from typing import List
-from ..core.get_config import get_var
+from MeshRenameBot.config import Config
 from .Executor import Executor
 from .Default import DefaultManeuver
 
@@ -12,7 +12,7 @@ class ExecutorManager:
     canceled_uids = []
 
     def __init__(self) -> None:
-        self._max_simultaneous = get_var("MAX_QUEUE_SIZE")
+        self._max_simultaneous = Config.MAX_QUEUE_SIZE
         self.create_executors()
 
     def create_executors(self) -> None:
