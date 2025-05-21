@@ -5,7 +5,7 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     CallbackQuery,
 )
-from ..database.user_db import UserDB
+from ..database.user_db import get_user_db
 from ..translations import Translator
 
 
@@ -21,7 +21,8 @@ def get_inline_keyboard(translator: Translator) -> InlineKeyboardMarkup:
 
 
 async def set_caption(_: Client, msg: Message):
-    udb = UserDB()
+    UserDB = await get_user_db()
+    udb = UserDB
     user_id = msg.from_user.id
     user_locale = await udb.get_var("locale", user_id)
     translator = Translator(user_locale)
@@ -49,7 +50,8 @@ async def set_caption(_: Client, msg: Message):
 
 
 async def del_caption(_: Client, msg: CallbackQuery):
-    udb = UserDB()
+    UserDB = await get_user_db()
+    udb = UserDB
     user_id = msg.from_user.id
     user_locale = await udb.get_var("locale", user_id)
     translator = Translator(user_locale)
