@@ -32,7 +32,7 @@ async def adjust_image(path: str) -> Union[str, None]:
 async def handle_set_thumb(client, msg: Message):
     user_id = msg.from_user.id
     UserDB = await get_user_db()
-    user_locale = UserDB().get_var(user_id, "locale")
+    user_locale = UserDB.get_var(user_id, "locale")
     translator = Translator(user_locale)
 
     original_message = msg.reply_to_message
@@ -60,7 +60,7 @@ async def handle_set_thumb(client, msg: Message):
 async def handle_get_thumb(client, msg: Message):
     user_id = msg.from_user.id
     UserDB = await get_user_db()
-    user_locale = UserDB().get_var(user_id, "locale")
+    user_locale = UserDB.get_var(user_id, "locale")
     translator = Translator(user_locale)
 
     renamelog.info("Getting Thumbnail")
@@ -153,7 +153,7 @@ async def get_thumbnail(file_path, user_id=None, force_docs=False):
 async def handle_clr_thumb(client, msg):
     user_id = msg.from_user.id
     UserDB = await get_user_db()
-    udb = UserDB()
+    udb = UserDB
     user_locale = udb.get_var(user_id, "locale")
     translator = Translator(user_locale)
     udb.set_thumbnail(None, msg.from_user.id)
