@@ -6,24 +6,21 @@ from pyrogram.types.bots_and_keyboards.inline_keyboard_markup import (
 )
 from pyrogram.types import CallbackQuery
 from pyrogram.types.user_and_chats.user import User
-from ..database.user_db import get_user_db
+from ..database.user_db import UserDB
 from ..mesh_bot import MeshRenameBot
 from pyrogram.types import Message
 from ..translations import Translator
 
 
 async def generate_mode_message(user_id):
-    UserDB = await get_user_db()
-    udb = UserDB
+    udb = UserDB()
     modee = udb.get_mode(user_id)
     command_mode = udb.get_var("command_mode", user_id)
-    if command_mode is None:
-        command_mode = UserDB.MODE_RENAME_WITH_COMMAND
+    command_mode = (
+        command_mode if command_mode is not None else UserDB.MODE_RENAME_WITH_COMMAND
+    )
 
     user_locale = udb.get_var("locale", user_id)
-    if user_locale is None:
-        user_locale = "en"
-
     translator = Translator(user_locale)
 
     msg_str = translator.get(
@@ -61,7 +58,7 @@ async def mode_callback(_: MeshRenameBot, msg: CallbackQuery):
     mode_type = data[0]  # Either 'mode' or 'command_mode'
     mode_value = int(data[-1])
 
-    udb = UserDB
+    udb = UserDB()
     user_id = msg.message.reply_to_message.from_user.id
 
     if mode_type == "mode":
