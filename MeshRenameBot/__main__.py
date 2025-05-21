@@ -1,7 +1,7 @@
 from .core.handlers import add_handlers
 from .mesh_bot import MeshRenameBot
 from .maneuvers.ExecutorManager import ExecutorManager
-from .config import Config  # <-- Changed from get_var to direct config import
+from .config import Config  # Use Config constants directly
 
 import logging
 import threading
@@ -31,7 +31,12 @@ logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
 # MAIN ENTRY POINT
 if __name__ == "__main__":
-    rbot = MeshRenameBot()
+    rbot = MeshRenameBot(
+        session_string=Config.SESSION_STRING,
+        api_id=Config.API_ID,
+        api_hash=Config.API_HASH,
+        workers=200
+    )
 
     excm = ExecutorManager()
     add_handlers(rbot)
