@@ -118,7 +118,9 @@ def add_handlers(client: MeshRenameBot) -> None:
         filters.document | filters.video | filters.audio | filters.photo,
     )
     )
-
+    client.add_handler(
+    MessageHandler(collect_sequence_files, filters.document | filters.video | filters.audio | filters.photo)
+)
     signal.signal(signal.SIGINT, term_handler)
     signal.signal(signal.SIGTERM, term_handler)
 
@@ -138,17 +140,18 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     user_locale = UserDB().get_var("locale", msg.from_user.id)
     translator = Translator(user_locale)
 
-    if command_mode == UserDB.MODE_RENAME_WITHOUT_COMMAND:
-        if msg.media is None:
-            return
-        rep_msg = msg
-    else:
-        if msg.media:
-            return
-        rep_msg = msg.reply_to_message
+    if command_mode == UserDB.MODE_RENAME_WITHOUT_COMMAND or msg.from_user.id in user_file_sequences:
+    if msg.media is None:
+        return
+    rep_msg = msg
+else:
+    if msg.media:
+        return
+    rep_msg = msg.reply_to_message
 
-    if rep_msg is None:
-        await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
+if rep_msg is None:
+    await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
+    return
 
     # Check if user is in bulk rename mode
     if msg.from_user.id in user_file_sequences:
@@ -331,12 +334,13 @@ async def end_sequence_handler(client: MeshRenameBot, msg: Message):
     del user_file_sequences[user_id]
     await msg.reply_text("Sequence complete. All files added to rename queue.")
 
-async def collect_sequence_files(_: MeshRenameBot, msg: Message):
-    global user_file_sequences  # <-- Add this line
-    ...
+async def collect_sequence_files(client: MeshRenameBot, msg: Message):
+    global user_file_sequences
     user_id = msg.from_user.id
 
-    # If user started a sequence, collect the file
-    if user_id in user_file_sequences:
-        user_file_sequences[user_id]["files"].append(msg)
-        await msg.reply_text("File added to sequence.")
+    if user_id not in user_file_sequences:
+        # Not in sequence mode, let other handlers handle it
+        return await msg.continue_propagation()
+
+    user_file_sequences[user_id]["files"].append(msg)
+    await msg.reply_text("File added to sequence.")
