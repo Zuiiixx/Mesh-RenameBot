@@ -140,25 +140,25 @@ async def rename_handler(client: MeshRenameBot, msg: Message) -> None:
     user_locale = UserDB().get_var("locale", msg.from_user.id)
     translator = Translator(user_locale)
 
-    if command_mode == UserDB.MODE_RENAME_WITHOUT_COMMAND or msg.from_user.id in user_file_sequences:
-    if msg.media is None:
-        return
-    rep_msg = msg
-else:
-    if msg.media:
-        return
-    rep_msg = msg.reply_to_message
+    if command_mode == UserDB.MODE_RENAME_WITHOUT_COMMAND:
+        if msg.media is None:
+            return
+        rep_msg = msg
+    else:
+        if msg.media:
+            return
+        rep_msg = msg.reply_to_message
 
-if rep_msg is None:
-    await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
-    return
+    if rep_msg is None:
+        await msg.reply_text(translator.get("REPLY_TO_MEDIA"), quote=True)
+        return
 
-    # Check if user is in bulk rename mode
+    # Bulk rename mode check
     if msg.from_user.id in user_file_sequences:
         user_file_sequences[msg.from_user.id]["files"].append(rep_msg)
         await msg.reply_text("File added to bulk rename list.")
         return
- 
+
     file_id = await client.get_file_id(rep_msg)
     if file_id is not None:
         await msg.reply_text(
