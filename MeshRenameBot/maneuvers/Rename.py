@@ -160,9 +160,9 @@ class RenameManeuver(DefaultManeuver):
                     markup,
                 ),
             )
-        except:
-            renamelog.exception("Errored while downloading the file.")
-            await progress.edit_text(translator.get("RENAME_ERRORED"))
+        except Exception as e:
+            await progress.edit_text(f"❗ Upload failed: {str(e)}")
+            renamelog.exception("Upload failed with error:")
             return
 
         if dl_path is None:
