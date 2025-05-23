@@ -56,7 +56,7 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(MessageHandler(help_handler, filters.regex(Commands.HELP, re.IGNORECASE)))
     client.add_handler(MessageHandler(start_sequence_handler, filters.command("startsequence")))
 
-client.add_handler(MessageHandler(collect_sequence_files, filters.document | filters.video | filters.audio | filters.photo))
+    client.add_handler(MessageHandler(collect_sequence_files, filters.document | filters.video | filters.audio | filters.photo))
     client.add_handler(MessageHandler(end_sequence_handler, filters.command("endsequence")))
     client.add_handler(MessageHandler(set_caption, filters.regex(Commands.SET_CAPTION, re.IGNORECASE)))
     client.add_handler(MessageHandler(change_locale, filters.regex(Commands.SET_LANG, re.IGNORECASE)))
