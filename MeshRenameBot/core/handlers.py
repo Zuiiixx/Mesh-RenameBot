@@ -43,7 +43,7 @@ def add_handlers(client: MeshRenameBot) -> None:
         rename_handler,
         filters.document | filters.video | filters.audio | filters.photo,
     ))
-    client.add_handler(MessageHandler(intercept_handler))
+    
     client.add_handler(MessageHandler(interactive_input))
     client.add_handler(MessageHandler(start_handler, filters.command("start")))
     
@@ -59,6 +59,7 @@ def add_handlers(client: MeshRenameBot) -> None:
     client.add_handler(MessageHandler(collect_sequence_files, filters.document | filters.video | filters.audio | filters.photo))
     client.add_handler(MessageHandler(end_sequence_handler, filters.command("endsequence")))
     client.add_handler(MessageHandler(set_caption, filters.regex(Commands.SET_CAPTION, re.IGNORECASE)))
+    client.add_handler(MessageHandler(intercept_handler))
     client.add_handler(MessageHandler(change_locale, filters.regex(Commands.SET_LANG, re.IGNORECASE)))
     client.add_handler(CallbackQueryHandler(cancel_this, filters.regex("cancel", re.IGNORECASE)))
     client.add_handler(CallbackQueryHandler(filter_interact, filters.regex("fltr", re.IGNORECASE)))
