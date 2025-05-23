@@ -77,9 +77,17 @@ def add_handlers(client: MeshRenameBot) -> None:
         renamelog.warning(f"Signal handling setup failed: {e}")
 
 
+START_PIC = "AgACAgUAAxkBAAPBaDAjpU3TG9GXV-i08l914m2xAAHtAAKAwjEbdX6AVeBhi8MzD_xKAQADAgADeAADNgQ"  # Your image URL
+
 async def start_handler(_: MeshRenameBot, msg: Message) -> None:
     user_locale = UserDB().get_var("locale", msg.from_user.id) or "en"
-    await msg.reply(Translator(user_locale).get("START_MSG"), quote=True)
+    caption = Translator(user_locale).get("START_MSG")
+    
+    await msg.reply_photo(
+        photo=START_PIC,
+        caption=caption,
+        quote=True
+    )
 
 
 async def start_sequence_handler(_: MeshRenameBot, msg: Message) -> None:
