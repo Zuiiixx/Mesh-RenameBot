@@ -38,7 +38,7 @@ renamelog = logging.getLogger(__name__)
 
 def add_handlers(client: MeshRenameBot) -> None:
 
-client.add_handler(MessageHandler(rename_handler, filters.regex(Commands.RENAME, re.IGNORECASE)))
+    client.add_handler(MessageHandler(rename_handler, filters.regex(Commands.RENAME, re.IGNORECASE)))
     client.add_handler(MessageHandler(
         rename_handler,
         filters.document | filters.video | filters.audio | filters.photo,
